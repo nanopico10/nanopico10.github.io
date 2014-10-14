@@ -1,0 +1,547 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>WTL でシンプルな SDI アプリケーションを作る - 001 - あなたとコードとラッピーと</title>
+  <meta name="author" content="ŊɑղօԹíϲօ(なのぴこ)">
+
+  
+  <meta name="description" content="Windows プログラミングを勉強していなかったので、急に思い立って WTL (Windows Template Library) をやってみることにしてみました。時代は Mac で iOS プログラムかも知れませんが、Mac 持ってないので！ このブログは WTL での Windows &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="あなたとコードとラッピーと" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">あなたとコードとラッピーと</a></h1>
+  
+    <h2>プログラムについて何か捻り出す感じです</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:nanopico10.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">WTL でシンプルな SDI アプリケーションを作る - 001</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T19:51:58+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>7:51 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Windows プログラミングを勉強していなかったので、急に思い立って WTL (Windows Template Library) をやってみることにしてみました。時代は Mac で iOS プログラムかも知れませんが、Mac 持ってないので！</p>
+
+<p>このブログは WTL での Windows アプリケーションの作り方というよりは、WTL はどういう仕組みで実装されているかに焦点をあててみます。</p>
+
+<!-- more -->
+
+
+<p>{:TOC}</p>
+
+<h2>まずは App Wizard でひな形を生成してみる</h2>
+
+<p>WTL でプログラムをするにあたって、何が必要かさっぱりわからないので、何はともあれ App Wizard でひな形を生成してみました。</p>
+
+<p>使用した環境は、</p>
+
+<ul>
+<li>Microsoft Visual Studio 2008</li>
+<li>ATL 9.0</li>
+<li>WTL 9.1</li>
+</ul>
+
+
+<p>です。</p>
+
+<p>Visual Studio 2008 は家に転がっていたので、有効利用するためにインストールしました。</p>
+
+<p>WTL は ATL のソースファイルが必要なので、Express edition を使用している方は、別途 WDK をインストールするなどして、ATL を調達する必要があります。</p>
+
+<p>そして、一番シンプルそうな形式で、以下のように App Wizard を実行してみました。</p>
+
+<ul>
+<li>SDI アプリケーション</li>
+<li>View を生成する</li>
+<li>Active X のホストはなし</li>
+<li>コマンドバー、ReBar、ステータスバーなどは一切なし</li>
+<li>Unicode サポートあり</li>
+</ul>
+
+
+<p>生成されたファイルが以下の通りとなります。</p>
+
+<p><img src="/images/blog/WTL-SimpleSDI-Solution.png" title="'Generated files.'" ></p>
+
+<p>自動生成されたファイルには、<code>CAboutDlg</code>、<code>CMainFrame</code> と <code>CSimpleSDIView</code> というクラスが含まれている。</p>
+
+<h2>エントリポイントを探す</h2>
+
+<p>アプリケーションの構造を把握するために、まずエントリポイントを探します。C/C++ では一般的に <code>main</code> 関数が相当します。</p>
+
+<p>Windows アプリケーションでは、エントリポイントは <code>main</code> 関数ではなく <code>WinMain</code> 関数となるのが一般的です。WTL も Windows アプリケーションである以上、何かしらのエントリポイントを持っているはずなので探してみましょう。
+ちなみに MFC では、フレームワークによって <code>WinMain</code> は隠ぺいされています。</p>
+
+<p>WTL では App Wizard により生成された、<code>SimpleSDI.cpp</code> というソースファイルに <code>WinMain</code> 関数があります。Unicode サポートを有効にしているため、関数名は <code>_tWinMain</code> となっています。
+コードの抜粋は以下の通りです。</p>
+
+<figure class='code'><figcaption><span>_tWinMain</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="kt">int</span> <span class="n">WINAPI</span> <span class="nf">_tWinMain</span><span class="p">(</span><span class="n">HINSTANCE</span> <span class="n">hInstance</span><span class="p">,</span> <span class="n">HINSTANCE</span> <span class="cm">/*hPrevInstance*/</span><span class="p">,</span> <span class="n">LPTSTR</span> <span class="n">lpstrCmdLine</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nCmdShow</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="n">HRESULT</span> <span class="n">hRes</span> <span class="o">=</span> <span class="o">::</span><span class="n">CoInitialize</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span>
+</span><span class='line'><span class="c1">// If you are running on NT 4.0 or higher you can use the following call instead to </span>
+</span><span class='line'><span class="c1">// make the EXE free threaded. This means that calls come in on a random RPC thread.</span>
+</span><span class='line'><span class="c1">//   HRESULT hRes = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);</span>
+</span><span class='line'>  <span class="n">ATLASSERT</span><span class="p">(</span><span class="n">SUCCEEDED</span><span class="p">(</span><span class="n">hRes</span><span class="p">));</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used</span>
+</span><span class='line'>  <span class="o">::</span><span class="n">DefWindowProc</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0L</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">AtlInitCommonControls</span><span class="p">(</span><span class="n">ICC_BAR_CLASSES</span><span class="p">);</span> <span class="c1">// add flags to support other controls</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">hRes</span> <span class="o">=</span> <span class="n">_Module</span><span class="p">.</span><span class="n">Init</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">hInstance</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">ATLASSERT</span><span class="p">(</span><span class="n">SUCCEEDED</span><span class="p">(</span><span class="n">hRes</span><span class="p">));</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">nRet</span> <span class="o">=</span> <span class="n">Run</span><span class="p">(</span><span class="n">lpstrCmdLine</span><span class="p">,</span> <span class="n">nCmdShow</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">_Module</span><span class="p">.</span><span class="n">Term</span><span class="p">();</span>
+</span><span class='line'>  <span class="o">::</span><span class="n">CoUninitialize</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">return</span> <span class="n">nRet</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>処理を順番に追っていきましょう。</p>
+
+<figure class='code'><figcaption><span>_tWinMain関数の前半</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">HRESULT</span> <span class="n">hRes</span> <span class="o">=</span> <span class="o">::</span><span class="n">CoInitialize</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span>
+</span><span class='line'><span class="c1">// If you are running on NT 4.0 or higher you can use the following call instead to </span>
+</span><span class='line'><span class="c1">// make the EXE free threaded. This means that calls come in on a random RPC thread.</span>
+</span><span class='line'><span class="c1">//   HRESULT hRes = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);</span>
+</span><span class='line'><span class="n">ATLASSERT</span><span class="p">(</span><span class="n">SUCCEEDED</span><span class="p">(</span><span class="n">hRes</span><span class="p">));</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used</span>
+</span><span class='line'><span class="o">::</span><span class="n">DefWindowProc</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0L</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">AtlInitCommonControls</span><span class="p">(</span><span class="n">ICC_BAR_CLASSES</span><span class="p">);</span>   <span class="c1">// add flags to support other controls</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最初の数行はは ATL 関連の初期化です。</p>
+
+<p><a href="http://msdn.microsoft.com/ja-jp/library/ms695279.aspx">CoInitialize</a> 関数で <em>カレントスレッドの</em> COM を初期化し、<code>AtlInitCommonControls</code> 関数で ATL で使用するコモンコントロールを初期化しています。<code>ICC_BAR_CLASSES</code> を渡しているので、コマンドバーやステータスバーなどを初期化しているのでしょう。今回は詳細まで踏み込みません。</p>
+
+<p>あと、<a href="http://msdn.microsoft.com/ja-jp/library/cc410753.aspx">DefWindowProc</a> 関数がここで呼び出されていますが、コメントを見るに <a href="http://ja.wikipedia.org/wiki/Microsoft_Layer_for_Unicode">MSLU</a> 絡みのトリックのようなのです。MSLU は Windows 9x系のためのライブラリなので、すでにサポートが打ち切られた現状では、スルーしてもかまわないでしょう。</p>
+
+<p>後半部分を見てみます。</p>
+
+<figure class='code'><figcaption><span>_tWinMain関数の後半</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">hRes</span> <span class="o">=</span> <span class="n">_Module</span><span class="p">.</span><span class="n">Init</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">hInstance</span><span class="p">);</span>
+</span><span class='line'><span class="n">ATLASSERT</span><span class="p">(</span><span class="n">SUCCEEDED</span><span class="p">(</span><span class="n">hRes</span><span class="p">));</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="n">nRet</span> <span class="o">=</span> <span class="n">Run</span><span class="p">(</span><span class="n">lpstrCmdLine</span><span class="p">,</span> <span class="n">nCmdShow</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">_Module</span><span class="p">.</span><span class="n">Term</span><span class="p">();</span>
+</span><span class='line'><span class="o">::</span><span class="n">CoUninitialize</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">return</span> <span class="n">nRet</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>_Module</code> という変数を使用していますが、これは <code>SimpleSDI.cpp</code> で定義されています。</p>
+
+<figure class='code'><figcaption><span>SimpleSDI.cpp</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">CAppModule</span> <span class="n">_Module</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>CAppModule</code> 型のグローバル変数として宣言されており、<code>CAppModule</code> は WTL の <code>atlapp.h</code> 内で定義されているクラスです。ATL の CComModule のサブクラスとして宣言されています。なかなか重要そうなクラスなので、次回以降に詳細を調べていきます。</p>
+
+<p>少し回り道になりますが、<code>CAppModule::Init</code> 関数を見ていきましょう。</p>
+
+<figure class='code'><figcaption><span>CAppModule::Init</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="c1">// Overrides of CComModule::Init and Term</span>
+</span><span class='line'>  <span class="n">HRESULT</span> <span class="nf">Init</span><span class="p">(</span><span class="n">ATL</span><span class="o">::</span><span class="n">_ATL_OBJMAP_ENTRY</span><span class="o">*</span> <span class="n">pObjMap</span><span class="p">,</span> <span class="n">HINSTANCE</span> <span class="n">hInstance</span><span class="p">,</span> <span class="k">const</span> <span class="n">GUID</span><span class="o">*</span> <span class="n">pLibID</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>      <span class="n">HRESULT</span> <span class="n">hRet</span> <span class="o">=</span> <span class="n">CComModule</span><span class="o">::</span><span class="n">Init</span><span class="p">(</span><span class="n">pObjMap</span><span class="p">,</span> <span class="n">hInstance</span><span class="p">,</span> <span class="n">pLibID</span><span class="p">);</span>
+</span><span class='line'>      <span class="k">if</span><span class="p">(</span><span class="n">FAILED</span><span class="p">(</span><span class="n">hRet</span><span class="p">))</span>
+</span><span class='line'>          <span class="k">return</span> <span class="n">hRet</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">m_dwMainThreadID</span> <span class="o">=</span> <span class="o">::</span><span class="n">GetCurrentThreadId</span><span class="p">();</span>
+</span><span class='line'>      <span class="k">typedef</span> <span class="n">ATL</span><span class="o">::</span><span class="n">CSimpleMap</span><span class="o">&lt;</span><span class="n">DWORD</span><span class="p">,</span> <span class="n">CMessageLoop</span><span class="o">*&gt;</span>   <span class="n">_mapClass</span><span class="p">;</span>
+</span><span class='line'>      <span class="n">m_pMsgLoopMap</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>      <span class="n">ATLTRY</span><span class="p">(</span><span class="n">m_pMsgLoopMap</span> <span class="o">=</span> <span class="k">new</span> <span class="n">_mapClass</span><span class="p">);</span>
+</span><span class='line'>      <span class="k">if</span><span class="p">(</span><span class="n">m_pMsgLoopMap</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>          <span class="k">return</span> <span class="n">E_OUTOFMEMORY</span><span class="p">;</span>
+</span><span class='line'>      <span class="n">m_pSettingChangeNotify</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">return</span> <span class="n">hRet</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>引数 <code>pObjMap</code> は NULL で、引数 <code>hInstance</code> に現在のインスタンスがセットされているので、その流れで関数を見ていきます。
+まず、基底クラスである <code>CComModule</code> の <code>CComModule::Init</code> 関数が呼ばれています。この関数の中身は少しややこしいかもしれません。<code>atlbase.h</code> のソースコード内で定義されています</p>
+
+<figure class='code'><figcaption><span>CComModule::Init</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="kr">inline</span> <span class="n">HRESULT</span> <span class="n">CComModule</span><span class="o">::</span><span class="n">Init</span><span class="p">(</span><span class="n">_ATL_OBJMAP_ENTRY</span><span class="o">*</span> <span class="n">p</span><span class="p">,</span> <span class="n">HINSTANCE</span> <span class="cm">/*h*/</span><span class="p">,</span> <span class="k">const</span> <span class="n">GUID</span><span class="o">*</span> <span class="n">plibid</span><span class="p">)</span> <span class="k">throw</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">plibid</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">m_libid</span> <span class="o">=</span> <span class="o">*</span><span class="n">plibid</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">_ATL_OBJMAP_ENTRY</span><span class="o">*</span> <span class="n">pEntry</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">!=</span> <span class="p">(</span><span class="n">_ATL_OBJMAP_ENTRY</span><span class="o">*</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>      <span class="n">m_pObjMap</span> <span class="o">=</span> <span class="n">p</span><span class="p">;</span>
+</span><span class='line'>      <span class="k">if</span> <span class="p">(</span><span class="n">m_pObjMap</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>      <span class="p">{</span>
+</span><span class='line'>          <span class="n">pEntry</span> <span class="o">=</span> <span class="n">m_pObjMap</span><span class="p">;</span>
+</span><span class='line'>          <span class="k">while</span> <span class="p">(</span><span class="n">pEntry</span><span class="o">-&gt;</span><span class="n">pclsid</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>          <span class="p">{</span>
+</span><span class='line'>              <span class="n">pEntry</span><span class="o">-&gt;</span><span class="n">pfnObjectMain</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span> <span class="c1">//initialize class resources</span>
+</span><span class='line'>              <span class="n">pEntry</span><span class="o">++</span><span class="p">;</span>
+</span><span class='line'>          <span class="p">}</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="k">for</span> <span class="p">(</span><span class="n">_ATL_OBJMAP_ENTRY</span><span class="o">**</span> <span class="n">ppEntry</span> <span class="o">=</span> <span class="n">_AtlComModule</span><span class="p">.</span><span class="n">m_ppAutoObjMapFirst</span><span class="p">;</span> <span class="n">ppEntry</span> <span class="o">&lt;</span> <span class="n">_AtlComModule</span><span class="p">.</span><span class="n">m_ppAutoObjMapLast</span><span class="p">;</span> <span class="n">ppEntry</span><span class="o">++</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>      <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">ppEntry</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>          <span class="p">(</span><span class="o">*</span><span class="n">ppEntry</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">pfnObjectMain</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span> <span class="c1">//initialize class resources</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">S_OK</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>plibid</code> については、今回は NULL が渡っており何も処理されていないのでスルーします。<code>_ATL_OBJMAP_ENTRY* p</code> も NULL が渡されており、この関数内だと <code>*ppEntry</code> は NULL になるので、特に処理を行わず <code>S_OK</code> を返して関数は終了しています。</p>
+
+<p><code>_ATL_OBJMAP_ENTRY</code> はなかなか重要そうな構造体なので、今後詳細に調べる予定です。</p>
+
+<p><code>SimpleSDI.cpp</code> に戻って、続きを見てみましょう。次はメッセージループの部分となります</p>
+
+<h2>Run 関数</h2>
+
+<p><code>Run</code> 関数は App Wizard により <code>SimpleSDI.cpp</code> に生成されたグローバル関数で、この関数内で</p>
+
+<ul>
+<li>メインフレーム・ウィンドウの構築</li>
+<li>ウィンドウプロシージャの登録</li>
+<li>メッセージループ</li>
+</ul>
+
+
+<p>が記述されています。</p>
+
+<p>生成されたソースコードは以下の通りです</p>
+
+<figure class='code'><figcaption><span>Run関数</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="kt">int</span> <span class="nf">Run</span><span class="p">(</span><span class="n">LPTSTR</span> <span class="cm">/*lpstrCmdLine*/</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nCmdShow</span> <span class="o">=</span> <span class="n">SW_SHOWDEFAULT</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="n">CMessageLoop</span> <span class="n">theLoop</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">_Module</span><span class="p">.</span><span class="n">AddMessageLoop</span><span class="p">(</span><span class="o">&amp;</span><span class="n">theLoop</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">CMainFrame</span> <span class="n">wndMain</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span><span class="p">(</span><span class="n">wndMain</span><span class="p">.</span><span class="n">CreateEx</span><span class="p">()</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">{</span>
+</span><span class='line'>      <span class="n">ATLTRACE</span><span class="p">(</span><span class="n">_T</span><span class="p">(</span><span class="s">&quot;Main window creation failed!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">));</span>
+</span><span class='line'>      <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">wndMain</span><span class="p">.</span><span class="n">ShowWindow</span><span class="p">(</span><span class="n">nCmdShow</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">nRet</span> <span class="o">=</span> <span class="n">theLoop</span><span class="p">.</span><span class="n">Run</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">_Module</span><span class="p">.</span><span class="n">RemoveMessageLoop</span><span class="p">();</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">nRet</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>関数の引数宣言で、<code>lpstrCmdLine</code> が省略されていますが、これは主に未使用引数が警告に出てしまうのを抑制するためで、実際にこの引数を関数内で使用する場合は、引数名のコメントアウトを解除して使用します。</p>
+
+<p>ここからが、メインフレームウィンドウの構築と実際のメッセージループ処理となりますが、長くなったので次回に続きます。
+中途半端ですみません。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">ŊɑղօԹíϲօ(なのぴこ)</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T19:51:58+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>7:51 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/wtl/'>wtl</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl/" data-via="nanopico10" data-counturl="http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/10/13/simplesdiapp-on-wtl/">WTL でシンプルな SDI アプリケーションを作る - 001</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+<section class="googleplus">
+  <h1>
+    <a href="https://plus.google.com/nanopico1.0@gmail.com?rel=author">
+      <img src="http://www.google.com/images/icons/ui/gprofile_button-32.png" width="32" height="32">
+      Google+
+    </a>
+  </h1>
+</section>
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - ŊɑղօԹíϲօ(なのぴこ) -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'nanopico10';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl/';
+        var disqus_url = 'http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

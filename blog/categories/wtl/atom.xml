@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Wtl | あなたとコードとラッピーと]]></title>
+  <link href="http://nanopico10.github.io/blog/categories/wtl/atom.xml" rel="self"/>
+  <link href="http://nanopico10.github.io/"/>
+  <updated>2014-10-14T19:30:10+09:00</updated>
+  <id>http://nanopico10.github.io/</id>
+  <author>
+    <name><![CDATA[ŊɑղօԹíϲօ(なのぴこ)]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[WTL でシンプルな SDI アプリケーションを作る - 001]]></title>
+    <link href="http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl/"/>
+    <updated>2014-10-13T19:51:58+09:00</updated>
+    <id>http://nanopico10.github.io/blog/2014/10/13/simplesdiapp-on-wtl</id>
+    <content type="html"><![CDATA[<p>Windows プログラミングを勉強していなかったので、急に思い立って WTL (Windows Template Library) をやってみることにしてみました。時代は Mac で iOS プログラムかも知れませんが、Mac 持ってないので！</p>
+
+<p>このブログは WTL での Windows アプリケーションの作り方というよりは、WTL はどういう仕組みで実装されているかに焦点をあててみます。</p>
+
+<!-- more -->
+
+
+<p>{:TOC}</p>
+
+<h2>まずは App Wizard でひな形を生成してみる</h2>
+
+<p>WTL でプログラムをするにあたって、何が必要かさっぱりわからないので、何はともあれ App Wizard でひな形を生成してみました。</p>
+
+<p>使用した環境は、</p>
+
+<ul>
+<li>Microsoft Visual Studio 2008</li>
+<li>ATL 9.0</li>
+<li>WTL 9.1</li>
+</ul>
+
+
+<p>です。</p>
+
+<p>Visual Studio 2008 は家に転がっていたので、有効利用するためにインストールしました。</p>
+
+<p>WTL は ATL のソースファイルが必要なので、Express edition を使用している方は、別途 WDK をインストールするなどして、ATL を調達する必要があります。</p>
+
+<p>そして、一番シンプルそうな形式で、以下のように App Wizard を実行してみました。</p>
+
+<ul>
+<li>SDI アプリケーション</li>
+<li>View を生成する</li>
+<li>Active X のホストはなし</li>
+<li>コマンドバー、ReBar、ステータスバーなどは一切なし</li>
+<li>Unicode サポートあり</li>
+</ul>
+
+
+<p>生成されたファイルが以下の通りとなります。</p>
+
+<p><img src="/images/blog/WTL-SimpleSDI-Solution.png" title="&lsquo;Generated files.&rsquo;" ></p>
+
+<p>自動生成されたファイルには、<code>CAboutDlg</code>、<code>CMainFrame</code> と <code>CSimpleSDIView</code> というクラスが含まれている。</p>
+
+<h2>エントリポイントを探す</h2>
+
+<p>アプリケーションの構造を把握するために、まずエントリポイントを探します。C/C++ では一般的に <code>main</code> 関数が相当します。</p>
+
+<p>Windows アプリケーションでは、エントリポイントは <code>main</code> 関数ではなく <code>WinMain</code> 関数となるのが一般的です。WTL も Windows アプリケーションである以上、何かしらのエントリポイントを持っているはずなので探してみましょう。
+ちなみに MFC では、フレームワークによって <code>WinMain</code> は隠ぺいされています。</p>
+
+<p>WTL では App Wizard により生成された、<code>SimpleSDI.cpp</code> というソースファイルに <code>WinMain</code> 関数があります。Unicode サポートを有効にしているため、関数名は <code>_tWinMain</code> となっています。
+コードの抜粋は以下の通りです。</p>
+
+<pre><code class="cpp _tWinMain">int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
+{
+    HRESULT hRes = ::CoInitialize(NULL);
+// If you are running on NT 4.0 or higher you can use the following call instead to 
+// make the EXE free threaded. This means that calls come in on a random RPC thread.
+//  HRESULT hRes = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    ATLASSERT(SUCCEEDED(hRes));
+
+    // this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
+    ::DefWindowProc(NULL, 0, 0, 0L);
+
+    AtlInitCommonControls(ICC_BAR_CLASSES); // add flags to support other controls
+
+    hRes = _Module.Init(NULL, hInstance);
+    ATLASSERT(SUCCEEDED(hRes));
+
+    int nRet = Run(lpstrCmdLine, nCmdShow);
+
+    _Module.Term();
+    ::CoUninitialize();
+
+    return nRet;
+}
+</code></pre>
+
+<p>処理を順番に追っていきましょう。</p>
+
+<pre><code class="cpp _tWinMain関数の前半">    HRESULT hRes = ::CoInitialize(NULL);
+// If you are running on NT 4.0 or higher you can use the following call instead to 
+// make the EXE free threaded. This means that calls come in on a random RPC thread.
+//  HRESULT hRes = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    ATLASSERT(SUCCEEDED(hRes));
+
+    // this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
+    ::DefWindowProc(NULL, 0, 0, 0L);
+
+    AtlInitCommonControls(ICC_BAR_CLASSES); // add flags to support other controls
+</code></pre>
+
+<p>最初の数行はは ATL 関連の初期化です。</p>
+
+<p><a href="http://msdn.microsoft.com/ja-jp/library/ms695279.aspx">CoInitialize</a> 関数で <em>カレントスレッドの</em> COM を初期化し、<code>AtlInitCommonControls</code> 関数で ATL で使用するコモンコントロールを初期化しています。<code>ICC_BAR_CLASSES</code> を渡しているので、コマンドバーやステータスバーなどを初期化しているのでしょう。今回は詳細まで踏み込みません。</p>
+
+<p>あと、<a href="http://msdn.microsoft.com/ja-jp/library/cc410753.aspx">DefWindowProc</a> 関数がここで呼び出されていますが、コメントを見るに <a href="http://ja.wikipedia.org/wiki/Microsoft_Layer_for_Unicode">MSLU</a> 絡みのトリックのようなのです。MSLU は Windows 9x系のためのライブラリなので、すでにサポートが打ち切られた現状では、スルーしてもかまわないでしょう。</p>
+
+<p>後半部分を見てみます。</p>
+
+<pre><code class="cpp _tWinMain関数の後半">    hRes = _Module.Init(NULL, hInstance);
+    ATLASSERT(SUCCEEDED(hRes));
+
+    int nRet = Run(lpstrCmdLine, nCmdShow);
+
+    _Module.Term();
+    ::CoUninitialize();
+
+    return nRet;
+</code></pre>
+
+<p><code>_Module</code> という変数を使用していますが、これは <code>SimpleSDI.cpp</code> で定義されています。</p>
+
+<pre><code class="cpp SimpleSDI.cpp">CAppModule _Module;
+</code></pre>
+
+<p><code>CAppModule</code> 型のグローバル変数として宣言されており、<code>CAppModule</code> は WTL の <code>atlapp.h</code> 内で定義されているクラスです。ATL の CComModule のサブクラスとして宣言されています。なかなか重要そうなクラスなので、次回以降に詳細を調べていきます。</p>
+
+<p>少し回り道になりますが、<code>CAppModule::Init</code> 関数を見ていきましょう。</p>
+
+<pre><code class="cpp CAppModule::Init">// Overrides of CComModule::Init and Term
+    HRESULT Init(ATL::_ATL_OBJMAP_ENTRY* pObjMap, HINSTANCE hInstance, const GUID* pLibID = NULL)
+    {
+        HRESULT hRet = CComModule::Init(pObjMap, hInstance, pLibID);
+        if(FAILED(hRet))
+            return hRet;
+
+        m_dwMainThreadID = ::GetCurrentThreadId();
+        typedef ATL::CSimpleMap&lt;DWORD, CMessageLoop*&gt;   _mapClass;
+        m_pMsgLoopMap = NULL;
+        ATLTRY(m_pMsgLoopMap = new _mapClass);
+        if(m_pMsgLoopMap == NULL)
+            return E_OUTOFMEMORY;
+        m_pSettingChangeNotify = NULL;
+
+        return hRet;
+    }
+</code></pre>
+
+<p>引数 <code>pObjMap</code> は NULL で、引数 <code>hInstance</code> に現在のインスタンスがセットされているので、その流れで関数を見ていきます。
+まず、基底クラスである <code>CComModule</code> の <code>CComModule::Init</code> 関数が呼ばれています。この関数の中身は少しややこしいかもしれません。<code>atlbase.h</code> のソースコード内で定義されています</p>
+
+<pre><code class="cpp CComModule::Init">inline HRESULT CComModule::Init(_ATL_OBJMAP_ENTRY* p, HINSTANCE /*h*/, const GUID* plibid) throw()
+{
+    if (plibid != NULL)
+        m_libid = *plibid;
+
+    _ATL_OBJMAP_ENTRY* pEntry;
+    if (p != (_ATL_OBJMAP_ENTRY*)-1)
+    {
+        m_pObjMap = p;
+        if (m_pObjMap != NULL)
+        {
+            pEntry = m_pObjMap;
+            while (pEntry-&gt;pclsid != NULL)
+            {
+                pEntry-&gt;pfnObjectMain(true); //initialize class resources
+                pEntry++;
+            }
+        }
+    }
+    for (_ATL_OBJMAP_ENTRY** ppEntry = _AtlComModule.m_ppAutoObjMapFirst; ppEntry &lt; _AtlComModule.m_ppAutoObjMapLast; ppEntry++)
+    {
+        if (*ppEntry != NULL)
+            (*ppEntry)-&gt;pfnObjectMain(true); //initialize class resources
+    }
+    return S_OK;
+}
+</code></pre>
+
+<p><code>plibid</code> については、今回は NULL が渡っており何も処理されていないのでスルーします。<code>_ATL_OBJMAP_ENTRY* p</code> も NULL が渡されており、この関数内だと <code>*ppEntry</code> は NULL になるので、特に処理を行わず <code>S_OK</code> を返して関数は終了しています。</p>
+
+<p><code>_ATL_OBJMAP_ENTRY</code> はなかなか重要そうな構造体なので、今後詳細に調べる予定です。</p>
+
+<p><code>SimpleSDI.cpp</code> に戻って、続きを見てみましょう。次はメッセージループの部分となります</p>
+
+<h2>Run 関数</h2>
+
+<p><code>Run</code> 関数は App Wizard により <code>SimpleSDI.cpp</code> に生成されたグローバル関数で、この関数内で</p>
+
+<ul>
+<li>メインフレーム・ウィンドウの構築</li>
+<li>ウィンドウプロシージャの登録</li>
+<li>メッセージループ</li>
+</ul>
+
+
+<p>が記述されています。</p>
+
+<p>生成されたソースコードは以下の通りです</p>
+
+<pre><code class="cpp Run関数">int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
+{
+    CMessageLoop theLoop;
+    _Module.AddMessageLoop(&amp;theLoop);
+
+    CMainFrame wndMain;
+
+    if(wndMain.CreateEx() == NULL)
+    {
+        ATLTRACE(_T("Main window creation failed!\n"));
+        return 0;
+    }
+
+    wndMain.ShowWindow(nCmdShow);
+
+    int nRet = theLoop.Run();
+
+    _Module.RemoveMessageLoop();
+    return nRet;
+}
+</code></pre>
+
+<p>関数の引数宣言で、<code>lpstrCmdLine</code> が省略されていますが、これは主に未使用引数が警告に出てしまうのを抑制するためで、実際にこの引数を関数内で使用する場合は、引数名のコメントアウトを解除して使用します。</p>
+
+<p>ここからが、メインフレームウィンドウの構築と実際のメッセージループ処理となりますが、長くなったので次回に続きます。
+中途半端ですみません。</p>
+]]></content>
+  </entry>
+  
+</feed>
